@@ -1,74 +1,86 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React from "react";
+import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
+import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  colors,
+  spacing,
+  typography,
+  globalStyles,
+} from "../theme/theme.config";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function HomePage() {
+  const selectTeam = async (team: "blue" | "red") => {
+    try {
+      await AsyncStorage.setItem("selectedTeam", team);
+      router.push("/clicker");
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde de l'équipe:", error);
+    }
+  };
 
-export default function HomeScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={[globalStyles.container]}>
+      <View style={styles.content}>
+        <Text style={[globalStyles.text, styles.title]}>
+          Choisissez votre équipe
+        </Text>
+        <TouchableOpacity
+          style={[styles.button, styles.blueButton]}
+          onPress={() => selectTeam("blue")}
+        >
+          <Text style={[globalStyles.text, styles.buttonText]}>
+            Équipe Bleue
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.redButton]}
+          onPress={() => selectTeam("red")}
+        >
+          <Text style={[globalStyles.text, styles.buttonText]}>
+            Équipe Rouge
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  content: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.lg,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  title: {
+    ...typography.h1,
+    marginBottom: spacing.xl,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  button: {
+    width: 250,
+    height: 70,
+    borderRadius: spacing.xl,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: spacing.sm,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  blueButton: {
+    backgroundColor: colors.secondary,
+  },
+  redButton: {
+    backgroundColor: colors.primary,
+  },
+  buttonText: {
+    ...typography.h2,
   },
 });
