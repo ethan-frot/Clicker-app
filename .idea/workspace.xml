@@ -6,6 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="1c557224-bf6f-414e-962e-31c5c87b22b8" name="Changes" comment="">
       <change afterPath="$PROJECT_DIR$/app/(tabs)/clicker.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/theme/theme.config.ts" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/app/utils/database.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
@@ -16,7 +17,7 @@
       <change beforePath="$PROJECT_DIR$/app/_layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/app/_layout.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/images/adaptive-icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/images/adaptive-icon.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/images/favicon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/images/favicon.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/images/icon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/images/icon.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/images/partial-react-logo.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/images/react-logo.png" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/assets/images/react-logo@2x.png" beforeDir="false" />
@@ -106,7 +107,7 @@
       <option name="presentableId" value="Default" />
       <updated>1742913214562</updated>
       <workItem from="1742913217071" duration="349000" />
-      <workItem from="1742913643195" duration="3945000" />
+      <workItem from="1742913643195" duration="4419000" />
     </task>
     <servers />
   </component>
