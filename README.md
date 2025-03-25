@@ -1,50 +1,39 @@
-# Welcome to your Expo app 👋
+# 🎮 Clicker - Le jeu de compétition en équipe
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 📱 Présentation
 
-## Get started
+Clicker est une application mobile développée avec React Native et Expo qui propose une expérience de jeu compétitive en temps réel. Les joueurs peuvent rejoindre l'équipe bleue ou rouge et participer à une bataille de clics pour faire gagner leur équipe !
 
-1. Install dependencies
+## ⚙️ Installation
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-    npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+1. Clonez le dépôt :
 
 ```bash
-npm run reset-project
+git clone https://github.com/ethan-frot/Clicker-app
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+2. Installez les dépendances :
 
-## Learn more
+```bash
+npm install
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+3. Lancez l'application :
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npx expo start
+```
 
-## Join the community
+## ✨ Fonctionnalités principales
 
-Join our community of developers creating universal apps.
+- 🔵 🔴 Choix entre deux équipes : Bleue ou Rouge
+- 👆 Interface de clic intuitive et réactive
+- 📊 Barre de progression en temps réel montrant la domination des équipes
+- 🏆 Système de score individuel et par équipe
+- 🎨 Design moderne avec thème sombre
+- 🔄 Synchronisation en temps réel avec Firebase
+- 📱 Interface utilisateur adaptative et responsive
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 📄 Licence
+
+Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
