@@ -1,5 +1,12 @@
 import React, {useState, useEffect} from "react";
-import {View, StyleSheet, TouchableOpacity, Text} from "react-native";
+import {
+    View,
+    StyleSheet,
+    TouchableOpacity,
+    Text,
+    Animated,
+    FlatList,
+} from "react-native";
 import {
     colors,
     spacing,
@@ -15,13 +22,36 @@ import {
     addDoc,
     onSnapshot,
     query,
-    where,
     doc,
     getDoc,
     setDoc,
     updateDoc,
     increment,
+    orderBy,
+    limit,
+    serverTimestamp,
 } from "firebase/firestore";
+
+// Interface pour les notifications de clic
+interface ClickNotification {
+    id: string;
+    username: string;
+    team: "blue" | "red";
+    timestamp: Date;
+    count: number;
+    opacity: Animated.Value;
+    isNew?: boolean;
+}
+
+// Interface pour les données utilisateur
+interface UserData {
+    username: string;
+    team: "blue" | "red";
+    totalClicks: number;
+    lastClicked: Date;
+    recentClicks: number;
+    lastSeriesTimestamp: Date;
+}
 
 export default function ClickerPage() {
     const [score, setScore] = useState(0);
@@ -29,7 +59,16 @@ export default function ClickerPage() {
     const [blueScore, setBlueScore] = useState(0);
     const [redScore, setRedScore] = useState(0);
     const [username, setUsername] = useState("");
+    const [notifications, setNotifications] = useState<ClickNotification[]>([]);
+    const [recentClickers, setRecentClickers] = useState<{
+        [key: string]: UserData;
+    }>({});
     const navigation = useNavigation();
+
+    // Limiter le nombre de notifications à afficher
+    const MAX_NOTIFICATIONS = 5;
+    // Durée d'affichage d'une notification en ms
+    const NOTIFICATION_DURATION = 5000;
 
     const loadTeam = async () => {
         try {
@@ -113,9 +152,132 @@ export default function ClickerPage() {
                     }
                 });
 
+                // Écouter les utilisateurs qui ont cliqué récemment
+                const usersRef = collection(db, "users");
+                const recentUsersQuery = query(
+                    usersRef,
+                    orderBy("lastClicked", "desc"),
+                    limit(MAX_NOTIFICATIONS * 2)
+                );
+
+                const unsubscribeUsers = onSnapshot(
+                    recentUsersQuery,
+                    (querySnapshot) => {
+                        const updatedClickers: { [key: string]: UserData } = {};
+                        const newNotificationsMap: { [key: string]: ClickNotification } =
+                            {};
+
+                        // Créer une copie des notifications existantes
+                        const existingNotifications = notifications.reduce((acc, notif) => {
+                            acc[notif.id] = notif;
+                            return acc;
+                        }, {} as { [key: string]: ClickNotification });
+
+                        // Traiter les documents d'utilisateurs
+                        querySnapshot.forEach((doc) => {
+                            const userData = doc.data();
+                            const userId = doc.id;
+                            const isCurrentUser =
+                                userData.username === username && userData.team === team;
+
+                            // Convertir le timestamp Firebase en Date si nécessaire
+                            const lastClicked = userData.lastClicked?.toDate
+                                ? userData.lastClicked.toDate()
+                                : new Date(userData.lastClicked);
+
+                            // Stocker les données de l'utilisateur
+                            updatedClickers[userId] = {
+                                username: userData.username,
+                                team: userData.team,
+                                totalClicks: userData.totalClicks || 0,
+                                lastClicked: lastClicked,
+                                recentClicks: userData.recentClicks || 0,
+                                lastSeriesTimestamp: userData.lastSeriesTimestamp?.toDate
+                                    ? userData.lastSeriesTimestamp.toDate()
+                                    : new Date(userData.lastSeriesTimestamp || lastClicked),
+                            };
+
+                            // Vérifier si c'est un clic récent (moins de 30 secondes)
+                            const currentTime = new Date().getTime();
+                            const clickTime = lastClicked.getTime();
+                            const isRecent = currentTime - clickTime < 30000;
+
+                            if (isRecent) {
+                                // Déterminer si c'est une nouvelle notification ou une mise à jour
+                                const existing = existingNotifications[userId];
+                                const opacity = existing
+                                    ? existing.opacity
+                                    : new Animated.Value(0);
+
+                                // Créer ou mettre à jour la notification
+                                newNotificationsMap[userId] = {
+                                    id: userId,
+                                    username: userData.username,
+                                    team: userData.team,
+                                    timestamp: lastClicked,
+                                    count: userData.recentClicks || 0,
+                                    opacity: opacity,
+                                    isNew: !existing,
+                                };
+                            }
+                        });
+
+                        // Mettre à jour l'état des clickers récents
+                        setRecentClickers(updatedClickers);
+
+                        // Gérer les animations pour les notifications
+                        Object.values(newNotificationsMap).forEach((notification) => {
+                            if (notification.isNew) {
+                                // Animation pour les nouvelles notifications
+                                Animated.sequence([
+                                    Animated.timing(notification.opacity, {
+                                        toValue: 1,
+                                        duration: 300,
+                                        useNativeDriver: true,
+                                    }),
+                                    Animated.delay(NOTIFICATION_DURATION),
+                                    Animated.timing(notification.opacity, {
+                                        toValue: 0,
+                                        duration: 300,
+                                        useNativeDriver: true,
+                                    }),
+                                ]).start();
+                            } else {
+                                // Flash pour les notifications mises à jour
+                                Animated.sequence([
+                                    Animated.timing(notification.opacity, {
+                                        toValue: 0.5,
+                                        duration: 100,
+                                        useNativeDriver: true,
+                                    }),
+                                    Animated.timing(notification.opacity, {
+                                        toValue: 1,
+                                        duration: 100,
+                                        useNativeDriver: true,
+                                    }),
+                                    Animated.delay(NOTIFICATION_DURATION),
+                                    Animated.timing(notification.opacity, {
+                                        toValue: 0,
+                                        duration: 300,
+                                        useNativeDriver: true,
+                                    }),
+                                ]).start();
+                            }
+                        });
+
+                        // Mettre à jour les notifications
+                        const updatedNotifications = Object.values(newNotificationsMap)
+                            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+                            .slice(0, MAX_NOTIFICATIONS);
+
+                        setNotifications(updatedNotifications);
+                    }
+                );
+
                 return () => {
                     unsubscribeBlue();
                     unsubscribeRed();
+                    unsubscribeUsers();
                 };
             } catch (error) {
                 console.error("Erreur lors du chargement du score:", error);
@@ -136,7 +298,7 @@ export default function ClickerPage() {
                     console.error("Erreur lors du nettoyage des listeners:", err)
                 );
         };
-    }, [team]);
+    }, [team, username, notifications]);
 
     const calculatePercentage = () => {
         const total = blueScore + redScore;
@@ -148,7 +310,7 @@ export default function ClickerPage() {
     };
 
     const handleClick = async () => {
-        if (!team) return;
+        if (!team || !username) return;
 
         try {
             // Mettre à jour le score total dans la collection "scores"
@@ -170,9 +332,54 @@ export default function ClickerPage() {
                 });
             }
 
-            // On peut toujours enregistrer l'interaction individuelle pour l'historique si nécessaire
-            const interactionsRef = collection(db, "interactions");
-            await addDoc(interactionsRef, {
+            // Mise à jour ou création du document utilisateur
+            const usersRef = collection(db, "users");
+            const userId = `${username}_${team}`; // ID unique basé sur le nom d'utilisateur et l'équipe
+            const userDocRef = doc(usersRef, userId);
+
+            // Vérifier si l'utilisateur existe déjà
+            const userDoc = await getDoc(userDocRef);
+            const currentTime = new Date();
+
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                const lastClicked = userData.lastClicked?.toDate
+                    ? userData.lastClicked.toDate()
+                    : new Date(userData.lastClicked);
+
+                // Vérifier si le dernier clic date de plus de 30 secondes
+                const timeDiff = currentTime.getTime() - lastClicked.getTime();
+
+                if (timeDiff > 30000) {
+                    // Si plus de 30 secondes, on commence une nouvelle série
+                    await updateDoc(userDocRef, {
+                        totalClicks: increment(1),
+                        recentClicks: 1, // Réinitialiser le compteur de clics récents
+                        lastClicked: currentTime,
+                        lastSeriesTimestamp: currentTime, // Nouvelle série
+                    });
+                } else {
+                    // Sinon, on incrémente la série de clics en cours
+                    await updateDoc(userDocRef, {
+                        totalClicks: increment(1),
+                        recentClicks: increment(1),
+                        lastClicked: currentTime,
+                    });
+                }
+            } else {
+                // Créer un nouveau document utilisateur
+                await setDoc(userDocRef, {
+                    username: username,
+                    team: team,
+                    totalClicks: 1,
+                    recentClicks: 1,
+                    lastClicked: currentTime,
+                    lastSeriesTimestamp: currentTime,
+                });
+            }
+
+            // Enregistrer l'interaction pour l'historique
+            await addDoc(collection(db, "interactions"), {
                 username: username,
                 team: team,
                 clicks: 1,
@@ -195,6 +402,63 @@ export default function ClickerPage() {
         await AsyncStorage.removeItem("selectedTeam");
         router.push("/");
     };
+
+    // Composant pour afficher une notification de clic
+    const renderNotification = ({item}: { item: ClickNotification }) => {
+        const notificationColor =
+            item.team === "blue" ? colors.secondary : colors.primary;
+
+        return (
+            <Animated.View
+                style={[
+                    styles.notification,
+                    {
+                        backgroundColor: notificationColor,
+                        opacity: item.opacity,
+                        transform: [
+                            {
+                                translateX: item.opacity.interpolate({
+                                    inputRange: [0, 1],
+                                    outputRange: [50, 0],
+                                }),
+                            },
+                        ],
+                    },
+                ]}
+            >
+                <Text style={styles.notificationText}>
+                    <Text style={styles.notificationUsername}>{item.username}</Text>
+                    {item.count > 1 ? (
+                        <Text>
+                            {" "}
+                            a cliqué{" "}
+                            <Text style={styles.notificationCount}>{item.count}x</Text>!
+                        </Text>
+                    ) : (
+                        <Text> a cliqué!</Text>
+                    )}
+                </Text>
+            </Animated.View>
+        );
+    };
+
+    // Mettre à jour le composant de notification pour auto-supprimer après le délai
+    useEffect(() => {
+        // Nettoyer les notifications expirées toutes les 10 secondes
+        const cleanupInterval = setInterval(() => {
+            const currentTime = new Date().getTime();
+            setNotifications((prevNotifs) =>
+                prevNotifs.filter(
+                    (n) =>
+                        currentTime - n.timestamp.getTime() < NOTIFICATION_DURATION + 1000
+                )
+            );
+        }, 10000);
+
+        return () => {
+            clearInterval(cleanupInterval);
+        };
+    }, []);
 
     if (!team) {
         return (
@@ -261,6 +525,14 @@ export default function ClickerPage() {
                     <Text style={[globalStyles.text, styles.buttonText]}>Cliquez!</Text>
                 </TouchableOpacity>
             </View>
+            <View style={styles.notificationsContainer}>
+                <FlatList
+                    data={notifications}
+                    renderItem={renderNotification}
+                    keyExtractor={(item) => item.id}
+                    contentContainerStyle={styles.notificationsList}
+                />
+            </View>
         </View>
     );
 }
@@ -268,9 +540,10 @@ export default function ClickerPage() {
 const styles = StyleSheet.create({
     content: {
         flex: 1,
-        justifyContent: "center",
+        justifyContent: "flex-start",
         alignItems: "center",
         gap: spacing.xl,
+        paddingTop: spacing.xl * 4,
     },
     header: {
         justifyContent: "center",
@@ -347,5 +620,42 @@ const styles = StyleSheet.create({
     },
     progressText: {
         ...typography.body,
+    },
+    // Styles pour les notifications
+    notificationsContainer: {
+        position: "absolute",
+        bottom: spacing.xl,
+        right: spacing.md,
+        width: 200,
+        maxHeight: 300,
+        zIndex: 100, // Réduire le zIndex pour être sous le bouton
+    },
+    notificationsList: {
+        gap: spacing.sm,
+    },
+    notification: {
+        padding: spacing.sm,
+        borderRadius: spacing.md,
+        marginBottom: spacing.sm,
+        opacity: 0.9,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    notificationText: {
+        color: colors.text,
+        fontSize: 14,
+    },
+    notificationUsername: {
+        fontWeight: "bold",
+    },
+    notificationCount: {
+        fontWeight: "bold",
+        fontSize: 16,
     },
 });
