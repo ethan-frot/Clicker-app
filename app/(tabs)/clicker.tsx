@@ -16,6 +16,11 @@ import {
     onSnapshot,
     query,
     where,
+    doc,
+    getDoc,
+    setDoc,
+    updateDoc,
+    increment,
 } from "firebase/firestore";
 
 export default function ClickerPage() {
@@ -53,8 +58,6 @@ export default function ClickerPage() {
 
     // Écouter les changements en temps réel
     useEffect(() => {
-        let unsubscribeFirestore: (() => void) | undefined;
-
         // Charger le nom d'utilisateur
         const loadUsername = async () => {
             try {
@@ -69,54 +72,69 @@ export default function ClickerPage() {
 
         const setupFirestoreListener = async () => {
             try {
-                const scoresRef = collection(db, "interactions");
+                // Écouter les scores des deux équipes en temps réel
+                const scoresRef = collection(db, "scores");
 
-                // Écouter les clics de l'équipe bleue
-                const blueQuery = query(scoresRef, where("team", "==", "blue"));
-                onSnapshot(blueQuery, (querySnapshot) => {
-                    let totalScore = 0;
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        totalScore += data.clicks || 0;
-                    });
-                    setBlueScore(totalScore);
+                // Écouter le document "blue" pour les scores de l'équipe bleue
+                const blueDocRef = doc(scoresRef, "blue");
+                const unsubscribeBlue = onSnapshot(blueDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const blueData = docSnapshot.data();
+                        setBlueScore(blueData.total || 0);
+                        if (team === "blue") {
+                            setScore(blueData.total || 0);
+                        }
+                    } else {
+                        // Créer le document s'il n'existe pas encore
+                        setDoc(blueDocRef, {total: 0});
+                        setBlueScore(0);
+                        if (team === "blue") {
+                            setScore(0);
+                        }
+                    }
                 });
 
-                // Écouter les clics de l'équipe rouge
-                const redQuery = query(scoresRef, where("team", "==", "red"));
-                onSnapshot(redQuery, (querySnapshot) => {
-                    let totalScore = 0;
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        totalScore += data.clicks || 0;
-                    });
-                    setRedScore(totalScore);
+                // Écouter le document "red" pour les scores de l'équipe rouge
+                const redDocRef = doc(scoresRef, "red");
+                const unsubscribeRed = onSnapshot(redDocRef, (docSnapshot) => {
+                    if (docSnapshot.exists()) {
+                        const redData = docSnapshot.data();
+                        setRedScore(redData.total || 0);
+                        if (team === "red") {
+                            setScore(redData.total || 0);
+                        }
+                    } else {
+                        // Créer le document s'il n'existe pas encore
+                        setDoc(redDocRef, {total: 0});
+                        setRedScore(0);
+                        if (team === "red") {
+                            setScore(0);
+                        }
+                    }
                 });
 
-                // Écouter les clics de l'équipe sélectionnée
-                if (team) {
-                    const teamQuery = query(scoresRef, where("team", "==", team));
-                    unsubscribeFirestore = onSnapshot(teamQuery, (querySnapshot) => {
-                        let totalScore = 0;
-                        querySnapshot.forEach((doc) => {
-                            const data = doc.data();
-                            totalScore += data.clicks || 0;
-                        });
-                        setScore(totalScore);
-                    });
-                }
+                return () => {
+                    unsubscribeBlue();
+                    unsubscribeRed();
+                };
             } catch (error) {
                 console.error("Erreur lors du chargement du score:", error);
+                return () => {
+                };
             }
         };
 
-        setupFirestoreListener();
+        const unsubscribeFirestore = setupFirestoreListener();
         loadUsername();
 
         return () => {
-            if (unsubscribeFirestore) {
-                unsubscribeFirestore();
-            }
+            unsubscribeFirestore
+                .then((unsubscribe) => {
+                    if (unsubscribe) unsubscribe();
+                })
+                .catch((err) =>
+                    console.error("Erreur lors du nettoyage des listeners:", err)
+                );
         };
     }, [team]);
 
@@ -133,7 +151,26 @@ export default function ClickerPage() {
         if (!team) return;
 
         try {
-            // Ajouter une nouvelle interaction avec un clic
+            // Mettre à jour le score total dans la collection "scores"
+            const scoresRef = collection(db, "scores");
+            const teamDocRef = doc(scoresRef, team);
+
+            // Vérifier si le document existe déjà
+            const teamDoc = await getDoc(teamDocRef);
+
+            if (teamDoc.exists()) {
+                // Incrémenter le score si le document existe déjà
+                await updateDoc(teamDocRef, {
+                    total: increment(1),
+                });
+            } else {
+                // Créer le document avec un score initial de 1 s'il n'existe pas
+                await setDoc(teamDocRef, {
+                    total: 1,
+                });
+            }
+
+            // On peut toujours enregistrer l'interaction individuelle pour l'historique si nécessaire
             const interactionsRef = collection(db, "interactions");
             await addDoc(interactionsRef, {
                 username: username,
