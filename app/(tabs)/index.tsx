@@ -1,86 +1,144 @@
-import React from "react";
-import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
-import { router } from "expo-router";
+import React, {useState, useEffect} from "react";
+import {
+    View,
+    StyleSheet,
+    TouchableOpacity,
+    Text,
+    TextInput,
+} from "react-native";
+import {router} from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  colors,
-  spacing,
-  typography,
-  globalStyles,
+    colors,
+    spacing,
+    typography,
+    globalStyles,
 } from "../theme/theme.config";
 
 export default function HomePage() {
-  const selectTeam = async (team: "blue" | "red") => {
-    try {
-      await AsyncStorage.setItem("selectedTeam", team);
-      router.push("/clicker");
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde de l'équipe:", error);
-    }
-  };
+    const [username, setUsername] = useState("");
 
-  return (
-    <View style={[globalStyles.container]}>
-      <View style={styles.content}>
-        <Text style={[globalStyles.text, styles.title]}>
-          Choisissez votre équipe
-        </Text>
-        <TouchableOpacity
-          style={[styles.button, styles.blueButton]}
-          onPress={() => selectTeam("blue")}
-        >
-          <Text style={[globalStyles.text, styles.buttonText]}>
-            Équipe Bleue
-          </Text>
-        </TouchableOpacity>
+    useEffect(() => {
+        // Charger le pseudo s'il existe déjà
+        const loadUsername = async () => {
+            try {
+                const savedUsername = await AsyncStorage.getItem("username");
+                if (savedUsername) {
+                    setUsername(savedUsername);
+                }
+            } catch (error) {
+                console.error("Erreur lors du chargement du pseudo:", error);
+            }
+        };
+        loadUsername();
+    }, []);
 
-        <TouchableOpacity
-          style={[styles.button, styles.redButton]}
-          onPress={() => selectTeam("red")}
-        >
-          <Text style={[globalStyles.text, styles.buttonText]}>
-            Équipe Rouge
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    const selectTeam = async (team: "blue" | "red") => {
+        if (!username.trim()) {
+            alert("Veuillez entrer un pseudo");
+            return;
+        }
+
+        try {
+            await AsyncStorage.setItem("username", username);
+            await AsyncStorage.setItem("selectedTeam", team);
+            router.push("/clicker");
+        } catch (error) {
+            console.error("Erreur lors de la sauvegarde:", error);
+        }
+    };
+
+    return (
+        <View style={[globalStyles.container]}>
+            <View style={styles.content}>
+                <Text style={[globalStyles.text, styles.title]}>
+                    Bienvenue au jeu !
+                </Text>
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="Entrez votre pseudo"
+                    value={username}
+                    onChangeText={setUsername}
+                    placeholderTextColor="#666"
+                />
+
+                <Text style={[globalStyles.text, styles.subtitle]}>
+                    Choisissez votre équipe
+                </Text>
+
+                <TouchableOpacity
+                    style={[styles.button, styles.blueButton]}
+                    onPress={() => selectTeam("blue")}
+                >
+                    <Text style={[globalStyles.text, styles.buttonText]}>
+                        Équipe Bleue
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.button, styles.redButton]}
+                    onPress={() => selectTeam("red")}
+                >
+                    <Text style={[globalStyles.text, styles.buttonText]}>
+                        Équipe Rouge
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.lg,
-  },
-  title: {
-    ...typography.h1,
-    marginBottom: spacing.xl,
-  },
-  button: {
-    width: 250,
-    height: 70,
-    borderRadius: spacing.xl,
-    justifyContent: "center",
-    alignItems: "center",
-    marginVertical: spacing.sm,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
+    content: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        gap: spacing.lg,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  blueButton: {
-    backgroundColor: colors.secondary,
-  },
-  redButton: {
-    backgroundColor: colors.primary,
-  },
-  buttonText: {
-    ...typography.h2,
-  },
+    title: {
+        ...typography.h1,
+        marginBottom: spacing.xl,
+    },
+    button: {
+        width: 250,
+        height: 70,
+        borderRadius: spacing.xl,
+        justifyContent: "center",
+        alignItems: "center",
+        marginVertical: spacing.sm,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    blueButton: {
+        backgroundColor: colors.secondary,
+    },
+    redButton: {
+        backgroundColor: colors.primary,
+    },
+    buttonText: {
+        ...typography.h2,
+    },
+    input: {
+        width: 250,
+        height: 50,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: spacing.md,
+        paddingHorizontal: spacing.md,
+        marginBottom: spacing.xl,
+        color: colors.text,
+        backgroundColor: colors.background,
+        fontSize: 16,
+    },
+    subtitle: {
+        ...typography.h2,
+        marginBottom: spacing.lg,
+    },
 });
