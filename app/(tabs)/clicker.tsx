@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useRef} from "react";
 import {
     View,
     StyleSheet,
@@ -29,7 +29,6 @@ import {
     increment,
     orderBy,
     limit,
-    serverTimestamp,
 } from "firebase/firestore";
 
 // Interface pour les notifications de clic
@@ -51,6 +50,7 @@ interface UserData {
     lastClicked: Date;
     recentClicks: number;
     lastSeriesTimestamp: Date;
+    autoClickersCount?: number;
 }
 
 export default function ClickerPage() {
@@ -63,12 +63,26 @@ export default function ClickerPage() {
     const [recentClickers, setRecentClickers] = useState<{
         [key: string]: UserData;
     }>({});
+    const autoClickerRef = useRef<NodeJS.Timeout | null>(null);
     const navigation = useNavigation();
+    const [userTotalClicks, setUserTotalClicks] = useState(0);
+    const [autoClickersCount, setAutoClickersCount] = useState(0);
 
     // Limiter le nombre de notifications à afficher
     const MAX_NOTIFICATIONS = 5;
     // Durée d'affichage d'une notification en ms
     const NOTIFICATION_DURATION = 5000;
+    // Nombre de clics nécessaires pour débloquer l'autoclicker
+    const AUTO_CLICKER_THRESHOLD = 100;
+    // Intervalle entre les clics automatiques en ms
+    const AUTO_CLICKER_INTERVAL = 1000;
+
+    // Calcul du coût pour le prochain curseur
+    const getNextAutoClickerCost = () => {
+        return Math.floor(
+            AUTO_CLICKER_THRESHOLD * Math.pow(1.5, autoClickersCount)
+        );
+    };
 
     const loadTeam = async () => {
         try {
@@ -195,7 +209,14 @@ export default function ClickerPage() {
                                 lastSeriesTimestamp: userData.lastSeriesTimestamp?.toDate
                                     ? userData.lastSeriesTimestamp.toDate()
                                     : new Date(userData.lastSeriesTimestamp || lastClicked),
+                                autoClickersCount: userData.autoClickersCount || 0,
                             };
+
+                            // Mettre à jour les informations de l'utilisateur actuel
+                            if (isCurrentUser) {
+                                setUserTotalClicks(userData.totalClicks || 0);
+                                setAutoClickersCount(userData.autoClickersCount || 0);
+                            }
 
                             // Vérifier si c'est un clic récent (moins de 30 secondes)
                             const currentTime = new Date().getTime();
@@ -299,6 +320,34 @@ export default function ClickerPage() {
                 );
         };
     }, [team, username, notifications]);
+
+    // Gérer l'autoclicker
+    useEffect(() => {
+        // Nettoyer le timer existant s'il y en a un
+        if (autoClickerRef.current) {
+            clearInterval(autoClickerRef.current);
+            autoClickerRef.current = null;
+        }
+
+        // Si l'utilisateur a des curseurs, démarrer le timer
+        if (team && autoClickersCount > 0) {
+            // Calcul d'intervalle basé sur le nombre d'autoclickers
+            // Plus on a d'autoclickers, plus les clics sont fréquents
+            const interval = Math.max(AUTO_CLICKER_INTERVAL / autoClickersCount, 100);
+
+            autoClickerRef.current = setInterval(() => {
+                handleClick();
+            }, interval);
+        }
+
+        // Nettoyer lors du démontage du composant
+        return () => {
+            if (autoClickerRef.current) {
+                clearInterval(autoClickerRef.current);
+                autoClickerRef.current = null;
+            }
+        };
+    }, [team, autoClickersCount]);
 
     const calculatePercentage = () => {
         const total = blueScore + redScore;
@@ -460,6 +509,41 @@ export default function ClickerPage() {
         };
     }, []);
 
+    // Modifier la fonction buyAutoClicker pour s'assurer que l'utilisateur a assez de clics ou a déjà débloqué la fonctionnalité
+    const buyAutoClicker = async () => {
+        if (!team || !username) return;
+
+        const nextCost = getNextAutoClickerCost();
+
+        // Vérifier si l'utilisateur a suffisamment de clics pour acheter le curseur
+        if (userTotalClicks < nextCost) {
+            return; // Ne rien faire si l'utilisateur n'a pas assez de clics
+        }
+
+        // Vérifier si c'est le premier curseur et si l'utilisateur a débloqué la fonctionnalité
+        if (autoClickersCount === 0 && userTotalClicks < AUTO_CLICKER_THRESHOLD) {
+            return; // Ne rien faire si l'utilisateur n'a pas atteint le seuil pour débloquer
+        }
+
+        try {
+            const usersRef = collection(db, "users");
+            const userId = `${username}_${team}`;
+            const userDocRef = doc(usersRef, userId);
+
+            // Mettre à jour le nombre d'autoclickers et déduire le coût
+            await updateDoc(userDocRef, {
+                autoClickersCount: increment(1),
+                totalClicks: increment(-nextCost), // Soustraire le coût du total de clics
+            });
+
+            // Mettre à jour l'état local
+            setAutoClickersCount(autoClickersCount + 1);
+            setUserTotalClicks(userTotalClicks - nextCost);
+        } catch (error) {
+            console.error("Erreur lors de l'achat d'un autoclicker:", error);
+        }
+    };
+
     if (!team) {
         return (
             <View style={[globalStyles.container]}>
@@ -505,6 +589,15 @@ export default function ClickerPage() {
                         </Text>
                     </View>
                 </View>
+
+                <View style={styles.notificationsContainer}>
+                    <FlatList
+                        data={notifications}
+                        renderItem={renderNotification}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.notificationsList}
+                    />
+                </View>
             </View>
             <View style={styles.content}>
                 <View style={styles.scoreContainer}>
@@ -513,25 +606,78 @@ export default function ClickerPage() {
                     </Text>
                     <FontAwesome name="trophy" size={32} color={colors.warning}/>
                 </View>
+
+                {/* Affichage du nombre total de clics de l'utilisateur */}
+                <Text style={[globalStyles.text, styles.userClicksText]}>
+                    Vos clics: {userTotalClicks}
+                </Text>
+
                 <Text style={[globalStyles.text, styles.teamText]}>
                     Équipe {getTeamName()}
                 </Text>
-                <TouchableOpacity
-                    style={[styles.clickButton, {backgroundColor: getTeamColor()}]}
-                    onPress={handleClick}
-                    activeOpacity={0.7}
-                >
-                    <FontAwesome name="hand-pointer-o" size={50} color={colors.text}/>
-                    <Text style={[globalStyles.text, styles.buttonText]}>Cliquez!</Text>
-                </TouchableOpacity>
+                <View style={styles.clickButtonContainer}>
+                    <TouchableOpacity
+                        style={[styles.clickButton, {backgroundColor: getTeamColor()}]}
+                        onPress={handleClick}
+                        activeOpacity={0.7}
+                    >
+                        <FontAwesome name="hand-pointer-o" size={50} color={colors.text}/>
+                        <Text style={[globalStyles.text, styles.buttonText]}>Cliquez!</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
-            <View style={styles.notificationsContainer}>
-                <FlatList
-                    data={notifications}
-                    renderItem={renderNotification}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.notificationsList}
-                />
+
+            {/* Autoclicker buttons section */}
+            <View style={styles.upgradesContainer}>
+                {/* Compteur d'autoclickeurs */}
+                {autoClickersCount > 0 && (
+                    <View style={styles.autoClickerCountContainer}>
+                        <FontAwesome
+                            name="mouse-pointer"
+                            size={20}
+                            color={getTeamColor()}
+                        />
+                        <Text style={[globalStyles.text, styles.autoClickerCountText]}>
+                            {autoClickersCount}
+                        </Text>
+                    </View>
+                )}
+                {/* Button to buy more autoclickers */}
+                <TouchableOpacity
+                    style={[
+                        styles.autoClickerButton,
+                        styles.buyAutoClickerButton,
+                        {
+                            backgroundColor:
+                                userTotalClicks >= getNextAutoClickerCost()
+                                    ? getTeamColor()
+                                    : colors.surface,
+                            opacity: userTotalClicks >= getNextAutoClickerCost() ? 1 : 0.7,
+                        },
+                    ]}
+                    onPress={buyAutoClicker}
+                    disabled={userTotalClicks < getNextAutoClickerCost()}
+                >
+                    <FontAwesome
+                        name="plus-circle"
+                        size={20}
+                        color={
+                            userTotalClicks >= getNextAutoClickerCost()
+                                ? colors.text
+                                : colors.textSecondary
+                        }
+                    />
+                    <Text
+                        style={[
+                            globalStyles.text,
+                            userTotalClicks >= getNextAutoClickerCost()
+                                ? styles.autoClickerText
+                                : styles.autoClickerDisabledText,
+                        ]}
+                    >
+                        Acheter curseur ({getNextAutoClickerCost()} clics)
+                    </Text>
+                </TouchableOpacity>
             </View>
         </View>
     );
@@ -572,6 +718,13 @@ const styles = StyleSheet.create({
     teamText: {
         ...typography.h2,
         marginBottom: spacing.md,
+    },
+    clickButtonContainer: {
+        position: "relative",
+        width: 200,
+        height: 200,
+        justifyContent: "center",
+        alignItems: "center",
     },
     clickButton: {
         width: 200,
@@ -621,14 +774,14 @@ const styles = StyleSheet.create({
     progressText: {
         ...typography.body,
     },
-    // Styles pour les notifications
+    // Styles pour les notifications - repositionnées en haut à droite
     notificationsContainer: {
         position: "absolute",
-        bottom: spacing.xl,
+        top: spacing.xl * 3,
         right: spacing.md,
         width: 200,
         maxHeight: 300,
-        zIndex: 100, // Réduire le zIndex pour être sous le bouton
+        zIndex: 100,
     },
     notificationsList: {
         gap: spacing.sm,
@@ -657,5 +810,62 @@ const styles = StyleSheet.create({
     notificationCount: {
         fontWeight: "bold",
         fontSize: 16,
+    },
+    userClicksText: {
+        ...typography.body,
+        fontWeight: "bold",
+        marginBottom: spacing.sm,
+    },
+
+    // Styles pour les upgrades
+    upgradesContainer: {
+        position: "absolute",
+        bottom: spacing.xl,
+        left: spacing.md,
+        zIndex: 100,
+        gap: spacing.md,
+    },
+    autoClickerButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        padding: spacing.md,
+        borderRadius: spacing.md,
+        gap: spacing.sm,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5,
+        minWidth: 220,
+    },
+    buyAutoClickerButton: {
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.2)",
+    },
+    autoClickerText: {
+        ...typography.body,
+        fontSize: 14,
+    },
+    autoClickerDisabledText: {
+        ...typography.caption,
+        color: colors.textSecondary,
+    },
+    autoClickerCountContainer: {
+        position: "absolute",
+        bottom: spacing.md,
+        left: spacing.md,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: spacing.sm,
+        backgroundColor: colors.surface,
+        padding: spacing.sm,
+        borderRadius: spacing.md,
+    },
+    autoClickerCountText: {
+        ...typography.body,
+        fontWeight: "bold",
     },
 });
