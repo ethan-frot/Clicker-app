@@ -18,11 +18,40 @@ git clone https://github.com/ethan-frot/Clicker-app
 npm install
 ```
 
-3. Lancez l'application :
+3. Configurez les variables d'environnement :
+
+```bash
+# Copiez le fichier d'exemple
+cp .env-example .env
+
+# Modifiez le fichier .env avec vos clés Firebase
+```
+
+4. Lancez l'application :
 
 ```bash
 npx expo start
 ```
+
+## 🔧 Configuration Firebase
+
+### Création du projet Firebase
+
+1. Créez un nouveau projet sur [Firebase Console](https://console.firebase.google.com/)
+2. Activez Firestore Database dans votre projet
+3. Configurez les règles de sécurité de Firestore
+
+### Structure de la base de données
+
+La base de données Firestore doit contenir les collections suivantes :
+
+- `users` : Stocke les informations des utilisateurs
+
+- `scores` : Stocke les scores des équipes
+
+- `interactions` : Stocke les interactions des utilisateurs
+
+Vous pouvez trouver ces informations dans les paramètres de votre projet Firebase.
 
 ## ✨ Fonctionnalités principales
 
