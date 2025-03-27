@@ -13,7 +13,7 @@ import {
     spacing,
     typography,
     globalStyles,
-} from "../theme/theme.config";
+} from "../../theme/theme.config";
 
 export default function HomePage() {
     const [username, setUsername] = useState("");
@@ -107,14 +107,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         marginVertical: spacing.sm,
-        elevation: 5,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
+        boxShadow: "0 2px 4px rgba(0,0,0,0.25)",
     },
     blueButton: {
         backgroundColor: colors.secondary,

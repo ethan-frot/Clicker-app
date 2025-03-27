@@ -12,11 +12,11 @@ import {
     spacing,
     typography,
     globalStyles,
-} from "../theme/theme.config";
+} from "../../theme/theme.config";
 import {FontAwesome} from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {router, useNavigation} from "expo-router";
-import {db} from "../utils/database";
+import {db} from "../../utils/database";
 import {
     collection,
     addDoc,
@@ -653,10 +653,11 @@ export default function ClickerPage() {
                                     ? getTeamColor()
                                     : colors.surface,
                             opacity: userTotalClicks >= getNextAutoClickerCost() ? 1 : 0.7,
+                            pointerEvents:
+                                userTotalClicks >= getNextAutoClickerCost() ? "auto" : "none",
                         },
                     ]}
                     onPress={buyAutoClicker}
-                    disabled={userTotalClicks < getNextAutoClickerCost()}
                 >
                     <FontAwesome
                         name="plus-circle"
@@ -733,14 +734,7 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         alignItems: "center",
         gap: spacing.md,
-        elevation: 8,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.3,
-        shadowRadius: 4.65,
+        boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
     },
     buttonText: {
         ...typography.h2,
@@ -791,14 +785,7 @@ const styles = StyleSheet.create({
         borderRadius: spacing.md,
         marginBottom: spacing.sm,
         opacity: 0.9,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+        boxShadow: "0 2px 4px rgba(0,0,0,0.25)",
     },
     notificationText: {
         color: colors.text,
@@ -831,14 +818,7 @@ const styles = StyleSheet.create({
         padding: spacing.md,
         borderRadius: spacing.md,
         gap: spacing.sm,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 2,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.84,
-        elevation: 5,
+        boxShadow: "0 2px 4px rgba(0,0,0,0.25)",
         minWidth: 220,
     },
     buyAutoClickerButton: {
