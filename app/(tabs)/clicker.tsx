@@ -627,21 +627,17 @@ export default function ClickerPage() {
                 </View>
             </View>
 
+            {/* Compteur d'autoclickeurs */}
+            {autoClickersCount > 0 && (
+                <View style={styles.autoClickerCountContainer}>
+                    <FontAwesome name="mouse-pointer" size={20} color={getTeamColor()}/>
+                    <Text style={[globalStyles.text, styles.autoClickerCountText]}>
+                        {autoClickersCount}
+                    </Text>
+                </View>
+            )}
             {/* Autoclicker buttons section */}
             <View style={styles.upgradesContainer}>
-                {/* Compteur d'autoclickeurs */}
-                {autoClickersCount > 0 && (
-                    <View style={styles.autoClickerCountContainer}>
-                        <FontAwesome
-                            name="mouse-pointer"
-                            size={20}
-                            color={getTeamColor()}
-                        />
-                        <Text style={[globalStyles.text, styles.autoClickerCountText]}>
-                            {autoClickersCount}
-                        </Text>
-                    </View>
-                )}
                 {/* Button to buy more autoclickers */}
                 <TouchableOpacity
                     style={[
@@ -835,7 +831,7 @@ const styles = StyleSheet.create({
     },
     autoClickerCountContainer: {
         position: "absolute",
-        bottom: spacing.md,
+        bottom: spacing.xl * 3,
         left: spacing.md,
         flexDirection: "row",
         alignItems: "center",
