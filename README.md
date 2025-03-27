@@ -21,10 +21,7 @@ npm install
 3. Configurez les variables d'environnement :
 
 ```bash
-# Copiez le fichier d'exemple
-cp .env-example .env
-
-# Modifiez le fichier .env avec vos clés Firebase
+# Modifier les clefs du fichier database.ts par vos propres clefs API
 ```
 
 4. Lancez l'application :
